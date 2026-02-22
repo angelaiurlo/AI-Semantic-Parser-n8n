@@ -1,0 +1,548 @@
+{
+  "name": "AI Semantic Parser & Automated Inbox Triage",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "# AI SEMANTIC PARSER\n## Automated Inbox Triage Pipeline\n\n**Problem solved:** Operations teams waste thousands of hours manually reading inbound emails, extracting data, and routing tickets. This pipeline replaces that human middleware entirely.\n\n**Architecture:** The LLM is used NOT as a chatbot, but as a rigid **data extraction API** — it reads unstructured email text and outputs a predictable, machine-readable JSON object. Standard logic nodes then take over.\n\n```\nWebhook / IMAP\n  └──► LLM Parser (GPT-4o-mini)\n          └──► JSON Structurer (Code Node)\n                  └──► Switch (Intent + Urgency)\n                          ├── 🚨 CRITICAL  ──► Notion Ticket + Slack Escalation\n                          └── 📋 STANDARD  ──► Notion Ticket (Standard Queue)\n```\n\n**Processing time target: < 3 seconds per email**",
+        "height": 440,
+        "width": 764,
+        "color": 5
+      },
+      "id": "a56d6679-e703-49ff-9fb7-0db66e4ad980",
+      "name": "🏗️ Architecture Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2720,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Ingestion Layer\n\nTwo options to configure:\n\n**Option A — Webhook (recommended for testing):**\nSend a `POST` request with this body:\n```json\n{\n  \"subject\": \"Urgent: Order #4521 not delivered\",\n  \"body\": \"Hi, I'm John Smith. My order #4521 placed 2 weeks ago has still not arrived. I am extremely frustrated and will dispute the charge if this isn't resolved today.\"\n}\n```\n\n**Option B — IMAP Email Read:**\nReplace this node with an `Email Read (IMAP)` node connected to `support@yourcompany.com`. Map `subject` and `text` fields downstream.\n\n⚙️ The webhook path is `/email-ingest`. Copy the Production URL into your testing tool (Postman, curl, etc.).",
+        "height": 448,
+        "width": 496,
+        "color": 7
+      },
+      "id": "059d3cac-6fd1-409f-8ca4-69beb04c0cb2",
+      "name": "📌 Node 1 — Ingestion",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1888,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## LLM Semantic Parser\n\nUses **GPT-4o-mini** (fast + low cost) as a strict data extraction API.\n\n**System prompt enforces:**\n- Return ONLY a valid JSON object\n- No conversational text, no markdown, no code fences\n- Extract exactly 4 fields:\n  - `CustomerName` → string\n  - `OrderID` → string or null\n  - `Intent` → `\"Support\"` | `\"Quote\"` | `\"Complaint\"`\n  - `UrgencyScore` → integer 1–5\n\n\n**The sub-node `OpenAI Chat Model` must be connected** to this node via the AI/model port (the bottom connection point labeled \"AI Model\").\n",
+        "height": 438,
+        "width": 400,
+        "color": 7
+      },
+      "id": "f2ac9601-f05d-4cb6-9dbe-ee84e83234e6",
+      "name": "📌 Node 2 — LLM Parser",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1360,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Intent Router (Switch)\n\nEvaluates two fields from the parsed JSON:\n- `UrgencyScore >= 4` OR `Intent == \"Complaint\"` -> Critical / Fast-Track\n- Everything else -> Standard Queue\n\n\n⚙️ **To customize thresholds:**\n- Change `4` to `3` to catch more cases in the critical lane\n- Add a third rule: `Intent == \"Quote\"` → Sales lane (Output 2)\n- Adjust to match your SLA definitions\n\n\nThe Switch uses `OR` logic on Output 0 — either condition alone is enough to escalate.",
+        "height": 434,
+        "width": 400,
+        "color": 4
+      },
+      "id": "1ef57c09-b6da-4270-a15b-23689272674f",
+      "name": "📌 Node 4 — Intent Router",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -944,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 🚨 CRITICAL LANE\n### UrgencyScore ≥ 4 OR Intent = \"Complaint\"\n\n**Step A — Notion Ticket (High Priority):**\nCreates a fully-populated support ticket in the Notion database with:\n- All extracted fields pre-filled\n- Status: `Critical`\n- Assignee: Customer Success Manager queue\n- SLA target: Response within 1 hour\n\n**Step B — Slack Escalation:**\nInstantly pings `#cs-escalations` with a formatted alert containing the full parsed context. The CSM can respond directly from Slack.\n\n\n**Goal:** Human eyes on the problem within minutes, zero manual reading required.",
+        "height": 434,
+        "width": 380,
+        "color": 3
+      },
+      "id": "b4f0bb49-e615-45c3-8035-230c4f756eef",
+      "name": "🚨 Critical Lane",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -480,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 📋 STANDARD LANE\n### UrgencyScore < 4 AND Intent ≠ \"Complaint\"\n\n**Notion Ticket (Standard Queue):**\nCreates a support ticket in Notion with:\n- All extracted fields pre-filled\n- Status: `Pending`\n- Assigned to: standard support queue rotation\n- SLA target: Response within 24 hours\n\n\n**No human alert fired.** The ticket sits in the standard queue and is handled in order of arrival.\n\n💡 Tip: connect a follow-up node here to auto-send an acknowledgement email to the customer using the `Send Email` node.",
+        "height": 382,
+        "width": 412,
+        "color": 2
+      },
+      "id": "ef7f5227-6493-4263-91a6-f49734091639",
+      "name": "📋 Standard Lane",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -144,
+        624
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## ⚙️ SETUP CHECKLIST\n\n**Before going live:**\n\n- [ ] Add your **OpenAI API Key** to the `OpenAI Chat Model` node credentials\n- [ ] Test the webhook with at least 2 payloads: one high-urgency complaint and one standard inquiry\n- [ ] Create a **Notion database** with columns: `Customer Name`, `Order ID`, `Intent`, `Urgency Score`, `Status`, `Raw Email`, `Created At`\n- [ ] Add your **Notion Integration Token** to the Notion node credentials\n- [ ] Insert your **Notion Database ID** in both Notion nodes\n- [ ] Add your **Slack Bot Token** to the Slack node credentials\n- [ ] Set the Slack channel name to your escalation channel (e.g. `#cs-escalations`)\n- [ ] Review and adjust the Switch threshold (`UrgencyScore >= 4`) to match your SLA\n- [ ] (Optional) Replace the Webhook node with an `Email Read (IMAP)` node for production use\n- [ ] Publish the workflow",
+        "height": 372,
+        "width": 768,
+        "color": 6
+      },
+      "id": "89b8b280-5819-4e64-b47b-ed789609c2ac",
+      "name": "⚙️ Setup Checklist",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2720,
+        496
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "email-ingest",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "410de787-f68b-421f-828f-1c5ecc02dfcf",
+      "name": "Webhook — Inbound Email",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1696,
+        560
+      ],
+      "webhookId": "ai-semantic-parser-ingest"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=USER EMAIL:\nSubject: {{ $json.body.subject }}.\n\nBody:\n{{ $json.body.body }}.",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=You are a strict data extraction API. Your only function is to read the email provided and extract structured information. You must return ONLY a single valid JSON object. Do not include any conversational text, explanation, markdown formatting, or code fences. If a field cannot be determined from the email, use null for strings and 3 for UrgencyScore.\n\nExtract the following fields:\n- CustomerName: string — the full name of the sender if mentioned, otherwise null\n- OrderID: string — any order/ticket/reference number (e.g. #4521, ORD-992), otherwise null\n- Intent: string — exactly one of: \"Support\", \"Quote\", \"Complaint\"\n- UrgencyScore: integer — a score from 1 (low urgency) to 5 (extreme urgency) based on the tone and content"
+            }
+          ]
+        }
+      },
+      "id": "7c02d4ed-3e0b-48b8-af80-a791332e7f70",
+      "name": "Basic LLM Chain — Semantic Parser",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        -1280,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "options": {
+          "responseFormat": "json_object",
+          "temperature": 0
+        }
+      },
+      "id": "6e4719bd-5842-4799-838c-8d1c31869ccd",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -1280,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output.UrgencyScore }}",
+                    "rightValue": 4,
+                    "operator": {
+                      "type": "number",
+                      "operation": "gte"
+                    },
+                    "id": "265258d6-794c-4d23-96e3-e74a49eb2a60"
+                  },
+                  {
+                    "leftValue": "={{ $json.output.Intent }}",
+                    "rightValue": "Complaint",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "ca303d73-e572-4920-a635-32663e7f821a"
+                  }
+                ],
+                "combinator": "or"
+              },
+              "renameOutput": true,
+              "outputKey": "Critical — Fast-Track Escalation"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output.UrgencyScore }}",
+                    "rightValue": 4,
+                    "operator": {
+                      "type": "number",
+                      "operation": "lt"
+                    },
+                    "id": "0ef9fb0c-7afb-4cbb-8808-1c93839d0bcf"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Standard Queue"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": 1
+        }
+      },
+      "id": "cce0836d-ebaa-4959-8852-4293fc8077ff",
+      "name": "Switch — Route by Intent & Urgency",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -800,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "value": "INSERT_NOTION_DATABASE_ID_HERE",
+          "mode": "id"
+        },
+        "title": "=[{{ $json.Intent }}] {{ $json.CustomerName }}{{ $json.OrderID ? ' — ' + $json.OrderID : '' }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Customer Name|rich_text",
+              "textContent": "={{ $json.CustomerName }}"
+            },
+            {
+              "key": "Order ID|rich_text",
+              "textContent": "={{ $json.OrderID || 'N/A' }}"
+            },
+            {
+              "key": "Intent|select",
+              "selectValue": "={{ $json.Intent }}"
+            },
+            {
+              "key": "Urgency Score|number",
+              "numberValue": "={{ $json.UrgencyScore }}"
+            },
+            {
+              "key": "Status|select",
+              "selectValue": "🔴 Critical"
+            },
+            {
+              "key": "Processed At|date"
+            },
+            {
+              "key": "Raw LLM Output|rich_text",
+              "textContent": "={{ $json._rawLlmOutput }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "050c8d91-aafa-4209-b090-c1b6db1b98e5",
+      "name": "Notion — Create Critical Ticket",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        -560,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#cs-escalations",
+          "mode": "name"
+        },
+        "text": "=*CRITICAL TICKET ESCALATION*\n\n*Customer:* {{ $('Code — Parse & Structure JSON').item.json.CustomerName }}\n*Order ID:* {{ $('Code — Parse & Structure JSON').item.json.OrderID || 'N/A' }}\n*Intent:* {{ $('Code — Parse & Structure JSON').item.json.Intent }}\n*Urgency Score:* {{ $('Code — Parse & Structure JSON').item.json.UrgencyScore }} / 5\n\n*Notion Ticket:* <{{ $json.url }}|Open ticket ↗>\n\n*SLA: Response required within 1 hour.*\nPlease acknowledge this message with a ✅ reaction when you pick it up.",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "id": "8333d48b-9597-43b7-95a1-33aa72c4350f",
+      "name": "Slack — Escalate to CS Team",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        -320,
+        480
+      ],
+      "webhookId": "4bee1b43-9978-459a-9c33-f1b7ba4a45b8"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "value": "INSERT_NOTION_DATABASE_ID_HERE",
+          "mode": "id"
+        },
+        "title": "=[{{ $json.Intent }}] {{ $json.CustomerName }}{{ $json.OrderID ? ' — ' + $json.OrderID : '' }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Customer Name|rich_text",
+              "textContent": "={{ $json.CustomerName }}"
+            },
+            {
+              "key": "Order ID|rich_text",
+              "textContent": "={{ $json.OrderID || 'N/A' }}"
+            },
+            {
+              "key": "Intent|select",
+              "selectValue": "={{ $json.Intent }}"
+            },
+            {
+              "key": "Urgency Score|number",
+              "numberValue": "={{ $json.UrgencyScore }}"
+            },
+            {
+              "key": "Status|select",
+              "selectValue": "🟡 Pending"
+            },
+            {
+              "key": "Processed At|date"
+            },
+            {
+              "key": "Raw LLM Output|rich_text",
+              "textContent": "={{ $json._rawLlmOutput }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6b38fe06-2d42-4002-8f97-3836422d8332",
+      "name": "Notion — Create Standard Ticket",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        -560,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"status\": \"processed\", \"message\": \"Email successfully parsed and triaged.\" }",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "da4c4815-e194-4402-9e61-c480ca0a2c5a",
+      "name": "Respond 200 — Critical ACK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -80,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"status\": \"processed\", \"message\": \"Email successfully parsed and triaged.\" }",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "849ee6c5-a7a9-4f3a-9eba-8abfa1cfc865",
+      "name": "Respond 200 — Standard ACK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -320,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"CustomerName\":\"\",\n  \"OrderID\":\"\",\n  \"Intent\":\"Support/Quote/Complaint\",\n  \"UrgencyScore\":1\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -1136,
+        768
+      ],
+      "id": "90589dcd-20b4-4182-abf2-ac3343855f8c",
+      "name": "Structured Output Parser"
+    }
+  ],
+  "pinData": {
+    "Webhook — Inbound Email": [
+      {
+        "json": {
+          "body": {
+            "subject": "Urgent: Order #4521 not delivered",
+            "body": "Hi, I'm John Smith. My order #4521 placed 2 weeks ago has still not arrived. I am extremely frustrated and will dispute the charge if this isn't resolved today."
+          }
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook — Inbound Email": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain — Semantic Parser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain — Semantic Parser": {
+      "main": [
+        [
+          {
+            "node": "Switch — Route by Intent & Urgency",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain — Semantic Parser",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch — Route by Intent & Urgency": {
+      "main": [
+        [
+          {
+            "node": "Notion — Create Critical Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notion — Create Standard Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notion — Create Critical Ticket": {
+      "main": [
+        [
+          {
+            "node": "Slack — Escalate to CS Team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack — Escalate to CS Team": {
+      "main": [
+        [
+          {
+            "node": "Respond 200 — Critical ACK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notion — Create Standard Ticket": {
+      "main": [
+        [
+          {
+            "node": "Respond 200 — Standard ACK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain — Semantic Parser",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "0665d80b-05c9-4972-be1b-722ede2b5221",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "aa899d52bc9a99662e8a8f3c92d223624a7cc5e3650b081a8a1a22bb1554df16"
+  },
+  "id": "ABqPkmZ2VKT0zKnw",
+  "tags": []
+}
