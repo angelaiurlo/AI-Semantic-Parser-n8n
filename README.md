@@ -37,6 +37,8 @@ Once the data is structured, standard logical routers (Switch nodes) take over, 
 * **CRM Upsert:** Automatically creates a structured ticket/deal in the company database (e.g., Zendesk, HubSpot, Notion).
 * **Alerting:** Pings the relevant department's Slack/Teams channel based on the AI's categorization.
 
+<img width="1703" height="552" alt="image" src="https://github.com/user-attachments/assets/a7f3ec4e-0240-4680-88d8-b0982fc87eef" />
+
 ---
 
 ## ⚙️ How to Implement
