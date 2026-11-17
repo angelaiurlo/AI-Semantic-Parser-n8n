@@ -1,7 +1,7 @@
 # AI Semantic Parser and Automated Inbox Triage
 
 ## 📉 The Business Problem: The "info@" Black Hole
-Operations and Customer Care teams waste thousands of hours manually reading generic inbound emails, trying to understand the customer's intent, assessing urgency, and copy-pasting data (names, order IDs, issues) into ticketing systems or CRMs. 
+Operations and Customer Care teams waste a great deal of time manually reading generic inbound emails, trying to understand the customer's intent, assessing urgency, and copy-pasting data (names, order IDs, issues) into ticketing systems or CRMs. 
 Using expensive human intelligence to act as a basic "text-to-data converter" is a massive operational bottleneck. It doesn't scale: if email volume doubles, the company is forced to hire more data-entry clerks.
 
 ## 🏗️ The Architectural Solution: LLM as a Semantic Parser
@@ -42,9 +42,21 @@ Once the data is structured, standard logical routers (Switch nodes) take over, 
 ---
 
 ## ⚙️ How to Implement
-1. Import `ai-semantic-parser.json` into your n8n instance.
+1. Import `AI Semantic Parser & Automated Inbox Triage.json` into your n8n instance.
 2. *Security Note:* Update the credentials using dummy/safe tokens before exporting your own versions.
 3. Configure the Email Read node with your testing inbox, or use the Webhook node to send POST requests containing dummy emails.
 4. Add your OpenAI/Anthropic API key to the LLM node.
 5. Review the Prompt inside the LLM node. Adjust the requested JSON schema keys to match your specific CRM fields.
 6. Connect the output branches of the Switch node to your preferred database or ticketing system.
+
+---
+
+## 👩‍💻 About the author
+
+Built by **Angela Iurlo** — custom automations and apps for companies and agencies that want to eliminate manual work.
+
+🌐 [angelaiurlo.com](https://angelaiurlo.com) · 💼 [LinkedIn](https://www.linkedin.com/in/angela-iurlo) · ✉️ angela.iurlo@angelaiurlo.com
+
+Want something similar for your business? [Ask for a free consultation](https://angelaiurlo.com/consulta.html).
+
+> All data in this repository is sample data. No credentials are included.

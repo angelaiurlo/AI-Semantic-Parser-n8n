@@ -423,18 +423,6 @@
       "name": "Structured Output Parser"
     }
   ],
-  "pinData": {
-    "Webhook — Inbound Email": [
-      {
-        "json": {
-          "body": {
-            "subject": "Urgent: Order #4521 not delivered",
-            "body": "Hi, I'm John Smith. My order #4521 placed 2 weeks ago has still not arrived. I am extremely frustrated and will dispute the charge if this isn't resolved today."
-          }
-        }
-      }
-    ]
-  },
   "connections": {
     "Webhook — Inbound Email": {
       "main": [
@@ -540,8 +528,7 @@
   },
   "versionId": "0665d80b-05c9-4972-be1b-722ede2b5221",
   "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "aa899d52bc9a99662e8a8f3c92d223624a7cc5e3650b081a8a1a22bb1554df16"
+    "templateCredsSetupCompleted": true
   },
   "id": "ABqPkmZ2VKT0zKnw",
   "tags": []
